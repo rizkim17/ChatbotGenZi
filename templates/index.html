@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenZi — Chatbot Gen Z Indonesia 🔥</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">⚡</span>
+                    <span class="logo-text">GenZi</span>
+                </div>
+                <p class="logo-tagline">your bestie chatbot ✨</p>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-btn active" data-mode="chat" onclick="switchMode('chat')">
+                    <span class="nav-icon">💬</span>
+                    <span>Ngobrol</span>
+                </button>
+                <button class="nav-btn" data-mode="translate" onclick="switchMode('translate')">
+                    <span class="nav-icon">🔄</span>
+                    <span>Translate-in</span>
+                </button>
+                <button class="nav-btn" data-mode="kamus" onclick="switchMode('kamus')">
+                    <span class="nav-icon">📖</span>
+                    <span>Kamus Receh</span>
+                </button>
+                <button class="nav-btn" data-mode="curhat" onclick="switchMode('curhat')">
+                    <span class="nav-icon">🫶</span>
+                    <span>Curhat Mode</span>
+                </button>
+                <button class="nav-btn" data-mode="quiz" onclick="switchMode('quiz')">
+                    <span class="nav-icon">🎮</span>
+                    <span>Kuis Slang</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="clear-btn" onclick="clearChat()">
+                    <span>🗑️</span> Clear Chat
+                </button>
+                <p class="credit">Powered by Qwen3 × Groq</p>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-area">
+            <!-- Header -->
+            <header class="chat-header">
+                <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+                <div class="header-info">
+                    <div class="header-avatar">⚡</div>
+                    <div>
+                        <h1 class="header-name">GenZi</h1>
+                        <p class="header-status" id="statusText">Online · siap ngobrol ✨</p>
+                    </div>
+                </div>
+                <div class="header-mode" id="currentMode">💬 Ngobrol</div>
+            </header>
+
+            <!-- Messages Container -->
+            <div class="messages-container" id="messagesContainer">
+                <div class="messages-wrapper" id="messagesWrapper">
+                    <!-- Messages will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Quick Actions (shown contextually) -->
+            <div class="quick-actions" id="quickActions">
+                <button class="quick-btn" onclick="sendQuickMessage('Kuis slang dong!')">🎮 Kuis Slang</button>
+                <button class="quick-btn" onclick="sendQuickMessage('Translate ke Gen Z: Saya sedang malas melakukan apapun')">🔄 Coba Translate</button>
+                <button class="quick-btn" onclick="sendQuickMessage('Artinya apa sih red flag?')">📖 Tanya Slang</button>
+                <button class="quick-btn" onclick="sendQuickMessage('Bestie, gue mau curhat dong...')">🫶 Curhat</button>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <div class="input-container">
+                    <textarea
+                        id="messageInput"
+                        placeholder="Ketik pesan lo di sini bestie..."
+                        rows="1"
+                        maxlength="2000"
+                        onkeydown="handleKeyDown(event)"
+                        oninput="autoResize(this)"
+                    ></textarea>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+                <p class="input-hint">Enter = kirim · Shift+Enter = new line</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Overlay for mobile sidebar -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+</body>
+</html>
