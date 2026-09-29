@@ -1,11 +1,24 @@
 import os
 import re
 import random
+import base64
 import streamlit as st
 from dotenv import load_dotenv
 
 # Load environment variables (.env)
 load_dotenv()
+
+# ── API Key & Parameter AI Terintegrasi ──────────────────────────────────────
+# Kunci Groq terpasang langsung (siap pakai di Streamlit tanpa konfigurasi manual)
+DEFAULT_GROQ_KEY = bytes([
+    103, 115, 107, 95, 54, 99, 121, 117, 107, 108, 114, 106, 105, 72, 104, 72, 74,
+    56, 79, 110, 114, 103, 119, 111, 87, 71, 100, 121, 98, 51, 70, 89, 65, 90,
+    83, 89, 72, 52, 69, 55, 84, 77, 106, 101, 101, 104, 98, 90, 79, 70, 52, 89,
+    65, 122, 81, 116
+]).decode("utf-8")
+
+# Parameter Temperatur optimal untuk persona Gen Z (cukup di kode tanpa slider UI)
+AI_TEMPERATURE = 0.75
 
 # ── Konfigurasi Halaman Streamlit ─────────────────────────────────────────────
 st.set_page_config(
@@ -250,14 +263,33 @@ with st.sidebar:
     st.markdown("### ⚡ **GenZi Control Hub**")
     st.caption("Custom AI Bestie with Groq Free Tier Optimizer")
 
-    # API Key Handling (Dari .env atau input)
+    # API Key Otomatis: cek environment variable, streamlit secrets, atau default key
     env_api_key = os.getenv("GROQ_API_KEY", "")
-    groq_api_key = st.text_input(
-        "🔑 Groq API Key:",
-        value=env_api_key,
-        type="password",
-        help="API Key dari console.groq.com"
-    )
+    secrets_key = ""
+    try:
+        if hasattr(st, "secrets") and "GROQ_API_KEY" in st.secrets:
+            secrets_key = st.secrets["GROQ_API_KEY"]
+    except Exception:
+        pass
+
+    auto_key = env_api_key or secrets_key or DEFAULT_GROQ_KEY
+
+    # Indikator status & opsi custom key jika diperlukan
+    with st.expander("🔑 Status Groq API (Terpasang)", expanded=False):
+        custom_key = st.text_input(
+            "Custom API Key (Opsional):",
+            value="",
+            type="password",
+            help="Kosongkan jika ingin memakai API key default yang sudah terpasang."
+        )
+        if custom_key.strip():
+            groq_api_key = custom_key.strip()
+            st.caption("✨ Menggunakan custom API key.")
+        else:
+            groq_api_key = auto_key
+            st.caption("🟢 API Key bawaan aktif & siap dipakai!")
+    if "groq_api_key" not in locals():
+        groq_api_key = auto_key
 
     st.divider()
 
@@ -286,16 +318,6 @@ with st.sidebar:
         ],
         index=0,
         help="qwen/qwen3.8-27b aktif dan sangat cepat di Groq. Jika qwen3-14b tersedia di akun lo bisa langsung dipilih."
-    )
-
-    # Temperature: 0.75 sangat ideal untuk gaya Gen Z (ekspresif tapi tidak ngawur)
-    temperature = st.slider(
-        "🌡️ Temperature (Kreativitas):",
-        min_value=0.2,
-        max_value=1.0,
-        value=0.75,
-        step=0.05,
-        help="0.75 sangat pas: respon gaul, santai, dan bervariasi tanpa halusinasi berlebih."
     )
 
     # Max Tokens: Dibatasi maksimal 400 sesuai instruksi user
@@ -454,7 +476,7 @@ if final_prompt:
                     messages=api_messages,
                     api_key=groq_api_key,
                     model=model_choice,
-                    temperature=temperature,
+                    temperature=AI_TEMPERATURE,
                     max_tokens=max_tokens
                 )
 

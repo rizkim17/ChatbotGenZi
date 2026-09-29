@@ -18,11 +18,12 @@ Ditenagai oleh model **Qwen** via **Groq Cloud API** dengan optimasi hemat kuota
 
 ---
 
-## ⚙️ Optimasi Limit Groq Gratis
+## ⚙️ Optimasi Limit Groq Gratis & Konfigurasi
 
-- **🪙 Batas Token Output**: Maksimal **400 tokens** per respon agar aman dari rate-limit TPM (Tokens Per Minute).
-- **🌡️ Temperature**: Disetel di kisaran **0.70 – 0.75** (kreatif & luwes untuk gaya bahasa gaul, namun tetap fokus dan tidak halusinasi berlebih).
-- **🧠 Window History**: Hanya mengirim ringkasan riwayat percakapan terakhir untuk menghemat token prompt input.
+- **🔑 Groq API Key Terintegrasi**: API Key sudah langsung terpasang di sistem (zero configuration), sehingga ketika dijalankan di Streamlit lokal maupun cloud bisa langsung dipakai tanpa perlu input manual. (Tetap mendukung custom key via file `.env` atau sidebar jika ingin ganti).
+- **🪙 Batas Token Output**: Maksimal **400 tokens** per respons agar hemat dan aman dari batas *Tokens Per Minute (TPM)* di akun gratis.
+- **🌡️ Temperature (Fixed di Kode)**: Disetel permanen di kode pada **0.75** (kreatif & luwes untuk gaya bahasa gaul Gen Z, namun tetap konsisten dan tidak perlu repot diatur manual di UI).
+- **🧠 Window History**: Membatasi riwayat percakapan yang dikirim ke API agar kuota token input tetap efisien.
 
 ---
 
@@ -34,7 +35,7 @@ git clone https://github.com/rizkim17/ChatbotGenZi.git
 cd ChatbotGenZi
 ```
 
-### 2. Buat & Aktifkan Virtual Environment (Opsional tapi Direkomendasikan)
+### 2. Buat & Aktifkan Virtual Environment (Opsional)
 ```bash
 python -m venv venv
 # Di Windows:
@@ -48,18 +49,11 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Setup API Key Groq
-Pastikan file `.env` sudah berisi API Key Groq lo:
-```env
-GROQ_API_KEY=your_groq_api_key_here
-```
-*(Bisa juga langsung dimasukkan lewat sidebar aplikasi Streamlit).*
-
-### 5. Jalankan Aplikasi Streamlit
+### 4. Jalankan Aplikasi Langsung
 ```bash
 streamlit run app.py
 ```
-Aplikasi akan otomatis terbuka di browser kamu di `http://localhost:8501`.
+Aplikasi akan otomatis terbuka di browser kamu di `http://localhost:8501` dan **langsung bisa dipakai ngobrol tanpa perlu setup apa-apa lagi!** ✨
 
 ---
 
