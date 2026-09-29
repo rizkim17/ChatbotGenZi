@@ -17,8 +17,12 @@ DEFAULT_GROQ_KEY = bytes([
     65, 122, 81, 116
 ]).decode("utf-8")
 
-# Parameter Temperatur optimal untuk persona Gen Z (cukup di kode tanpa slider UI)
+# Parameter AI & Model Terintegrasi (Dikelola langsung di kode tanpa ditampilkan ke user)
+DEFAULT_MODEL = "qwen/qwen3.8-27b"
+FALLBACK_MODELS = ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
 AI_TEMPERATURE = 0.75
+MAX_TOKENS = 400
+HISTORY_LIMIT = 6
 
 # ── Konfigurasi Halaman Streamlit ─────────────────────────────────────────────
 st.set_page_config(
@@ -200,41 +204,68 @@ def get_groq_client(api_key: str):
     except ImportError:
         return None
 
-def call_groq_api(messages, api_key, model="qwen/qwen3.8-27b", temperature=0.75, max_tokens=400):
-    """Panggil Groq API dengan fallback ke requests jika SDK tidak ada."""
+def call_groq_api(messages, api_key, model=DEFAULT_MODEL, temperature=AI_TEMPERATURE, max_tokens=MAX_TOKENS):
+    """Panggil Groq API dengan browser headers & automatic fallback antar model."""
     clean_key = api_key.strip()
+    browser_ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
     
-    # 1. Coba lewat Groq SDK resmi
-    try:
-        from groq import Groq
-        client = Groq(api_key=clean_key)
-        stream = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            stream=True
-        )
-        return stream, "sdk"
-    except Exception as e_sdk:
-        # 2. Fallback langsung via HTTP requests (REST API)
-        import requests
-        headers = {
-            "Authorization": f"Bearer {clean_key}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "model": model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens
-        }
-        resp = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=30)
-        if resp.status_code == 200:
-            content = resp.json()["choices"][0]["message"]["content"]
-            return content, "http"
-        else:
-            raise RuntimeError(f"Groq API Error ({resp.status_code}): {resp.text}")
+    # Urutan model yang dicoba (prioritaskan model utama lalu cadangan)
+    models_to_attempt = [model] + [m for m in FALLBACK_MODELS if m != model]
+    last_error = None
+
+    for m in models_to_attempt:
+        # 1. Coba lewat Groq SDK dengan custom browser headers
+        try:
+            from groq import Groq
+            client = Groq(
+                api_key=clean_key,
+                default_headers={
+                    "User-Agent": browser_ua,
+                    "Accept": "application/json",
+                }
+            )
+            stream = client.chat.completions.create(
+                model=m,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True
+            )
+            return stream, "sdk"
+        except Exception as e_sdk:
+            last_error = e_sdk
+
+        # 2. Fallback via HTTP requests dengan header browser lengkap
+        try:
+            import requests
+            headers = {
+                "Authorization": f"Bearer {clean_key}",
+                "Content-Type": "application/json",
+                "User-Agent": browser_ua,
+                "Accept": "application/json, text/plain, */*",
+                "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+            }
+            payload = {
+                "model": m,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            resp = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=25
+            )
+            if resp.status_code == 200:
+                content = resp.json()["choices"][0]["message"]["content"]
+                return content, "http"
+            else:
+                last_error = f"Status {resp.status_code}: {resp.text}"
+        except Exception as e_req:
+            last_error = e_req
+
+    raise RuntimeError(f"Semua model gagal diakses. Detail: {last_error}")
 
 def clean_ai_response(text: str) -> str:
     """Hapus tag <think>...</think> dari model reasoning seperti Qwen3."""
@@ -260,10 +291,10 @@ if "quiz_answered" not in st.session_state:
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### ⚡ **GenZi Control Hub**")
-    st.caption("Custom AI Bestie with Groq Free Tier Optimizer")
+    st.markdown("### ⚡ **GenZi Space**")
+    st.caption("AI Bestie Gaul & Relatable 24/7 ✨")
 
-    # API Key Otomatis: cek environment variable, streamlit secrets, atau default key
+    # API Key Otomatis di background (tidak ditampilkan ke user)
     env_api_key = os.getenv("GROQ_API_KEY", "")
     secrets_key = ""
     try:
@@ -272,72 +303,17 @@ with st.sidebar:
     except Exception:
         pass
 
-    auto_key = env_api_key or secrets_key or DEFAULT_GROQ_KEY
-
-    # Indikator status & opsi custom key jika diperlukan
-    with st.expander("🔑 Status Groq API (Terpasang)", expanded=False):
-        custom_key = st.text_input(
-            "Custom API Key (Opsional):",
-            value="",
-            type="password",
-            help="Kosongkan jika ingin memakai API key default yang sudah terpasang."
-        )
-        if custom_key.strip():
-            groq_api_key = custom_key.strip()
-            st.caption("✨ Menggunakan custom API key.")
-        else:
-            groq_api_key = auto_key
-            st.caption("🟢 API Key bawaan aktif & siap dipakai!")
-    if "groq_api_key" not in locals():
-        groq_api_key = auto_key
+    groq_api_key = env_api_key or secrets_key or DEFAULT_GROQ_KEY
 
     st.divider()
 
     # Mode Selector
-    st.markdown("🎯 **Mode Obrolan:**")
+    st.markdown("🎯 **Pilih Vibe / Mode:**")
     chat_mode = st.radio(
         "Pilih Mode:",
         ["💬 Ngobrol Santuy", "🔄 Translate-in", "📖 Kamus Receh", "🫶 Curhat Mode", "🎮 Kuis Slang"],
         index=0,
         label_visibility="collapsed"
-    )
-
-    st.divider()
-
-    # Parameter AI (Disesuaikan untuk Limit Gratis & Kebutuhan GenZi)
-    st.markdown("⚙️ **Fine-Tuning & Limit Gratis:**")
-    
-    # Model Selector - Default ke Qwen 3.8 / Qwen yang aktif di Groq
-    model_choice = st.selectbox(
-        "🤖 AI Model:",
-        [
-            "qwen/qwen3.8-27b",
-            "qwen/qwen3-14b",
-            "openai/gpt-oss-20b",
-            "openai/gpt-oss-120b"
-        ],
-        index=0,
-        help="qwen/qwen3.8-27b aktif dan sangat cepat di Groq. Jika qwen3-14b tersedia di akun lo bisa langsung dipilih."
-    )
-
-    # Max Tokens: Dibatasi maksimal 400 sesuai instruksi user
-    max_tokens = st.slider(
-        "🪙 Max Tokens (Hemat Kuota):",
-        min_value=100,
-        max_value=400,
-        value=400,
-        step=50,
-        help="Dibatasi maks 400 token agar tidak boros limit rate Groq gratis."
-    )
-
-    # Context window memory limit untuk hemat token prompt
-    history_limit = st.slider(
-        "🧠 Ingatan Chat Terakhir:",
-        min_value=2,
-        max_value=10,
-        value=6,
-        step=2,
-        help="Membatasi jumlah chat sebelumnya yang dikirim ke API agar kuota token tidak cepat habis."
     )
 
     st.divider()
@@ -354,7 +330,7 @@ with st.sidebar:
         st.rerun()
 
     # Cheat Sheet Slang di Expander
-    with st.expander("📚 Cheat Sheet Slang Gen Z"):
+    with st.expander("📚 Kamus Kilat Slang"):
         st.markdown("""
         - **People have**: Orang kaya
         - **In this economy**: Ngeluh harga mahal
@@ -373,11 +349,11 @@ st.markdown("""
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
         <div>
             <div class="genzi-title">⚡ GenZi Chatbot</div>
-            <p class="genzi-subtitle">Teman ngobrol AI gaul, santai, empatik & relatable • Powered by Qwen & Groq</p>
+            <p class="genzi-subtitle">Teman ngobrol AI gaul, santai, empatik & relatable ✨</p>
         </div>
         <div style="margin-top: 8px;">
             <span class="badge-pill">🔥 Campuran Indo-Inggris</span>
-            <span class="badge-pill">🪙 Max 400 Tokens</span>
+            <span class="badge-pill">💅 Relatable Vibes</span>
             <span class="badge-pill">✨ Anti-Toxic</span>
         </div>
     </div>
@@ -440,7 +416,7 @@ final_prompt = prompt_to_send if prompt_to_send else user_input
 
 if final_prompt:
     if not groq_api_key:
-        st.error("Aduh bestie, API Key Groq-nya belum diisi di sidebar nih! 🔑")
+        st.error("Aduh bestie, sistemnya lagi reload bentar nih! Coba refresh halamannya ya ✨")
         st.stop()
 
     # Tambahkan pesan user ke UI & state
@@ -458,7 +434,7 @@ if final_prompt:
         processed_prompt = f"[Mode Curhat] {final_prompt}"
 
     # Susun payload percakapan (Hemat token: System + N pesan terakhir)
-    recent_history = st.session_state.messages[-history_limit:-1]
+    recent_history = st.session_state.messages[-HISTORY_LIMIT:-1]
     api_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for m in recent_history:
         api_messages.append({"role": m["role"], "content": m["content"]})
@@ -475,9 +451,9 @@ if final_prompt:
                 res, call_type = call_groq_api(
                     messages=api_messages,
                     api_key=groq_api_key,
-                    model=model_choice,
+                    model=DEFAULT_MODEL,
                     temperature=AI_TEMPERATURE,
-                    max_tokens=max_tokens
+                    max_tokens=MAX_TOKENS
                 )
 
             if call_type == "sdk":
@@ -500,10 +476,7 @@ if final_prompt:
 
         except Exception as e:
             err_msg = str(e)
-            if "model_not_found" in err_msg.lower():
-                err_display = f"Aduh bestie, model `{model_choice}` lagi ga tersedia di Groq kamu 😭 Coba ganti ke `qwen/qwen3.8-27b` di sidebar ya!"
-            elif "rate_limit" in err_msg.lower():
-                err_display = "Wah kena limit rate Groq gratis nih bestie 😩 Tunggu beberapa detik terus coba lagi ya!"
-            else:
-                err_display = f"Aduh bestie, ada error nih: {err_msg} 😭"
+            print(f"[GenZi Log] Detail error: {err_msg}")
+            # Respon ramah in-character tanpa membocorkan status API/teknis ke user
+            err_display = "Aduh bestie, koneksi ke otak GenZi lagi ngadat dikit nih 😭 Coba klik kirim atau tanya sekali lagi ya! Pasti lancar kok ✨"
             response_placeholder.error(err_display)

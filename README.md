@@ -18,12 +18,12 @@ Ditenagai oleh model **Qwen** via **Groq Cloud API** dengan optimasi hemat kuota
 
 ---
 
-## ⚙️ Optimasi Limit Groq Gratis & Konfigurasi
+## ⚙️ Optimasi Sistem & Konfigurasi Zero-Setup
 
-- **🔑 Groq API Key Terintegrasi**: API Key sudah langsung terpasang di sistem (zero configuration), sehingga ketika dijalankan di Streamlit lokal maupun cloud bisa langsung dipakai tanpa perlu input manual. (Tetap mendukung custom key via file `.env` atau sidebar jika ingin ganti).
-- **🪙 Batas Token Output**: Maksimal **400 tokens** per respons agar hemat dan aman dari batas *Tokens Per Minute (TPM)* di akun gratis.
-- **🌡️ Temperature (Fixed di Kode)**: Disetel permanen di kode pada **0.75** (kreatif & luwes untuk gaya bahasa gaul Gen Z, namun tetap konsisten dan tidak perlu repot diatur manual di UI).
-- **🧠 Window History**: Membatasi riwayat percakapan yang dikirim ke API agar kuota token input tetap efisien.
+- **🔑 API Terpasang Otomatis**: Kunci API sudah langsung terintegrasi secara internal di background (zero configuration). Aplikasi siap dipakai langsung baik di lokal maupun Streamlit Cloud tanpa perlu input manual.
+- **🛡️ Antarmuka Bersih (Clean UI)**: Seluruh pengaturan teknis seperti status API, pemilihan model, token limit, dan temperatur disembunyikan sepenuhnya dari antarmuka pengguna agar pengalaman chatting tetap natural dan fokus.
+- **🪙 Manajemen Token & Kuota**: Dibatasi maksimal 400 token per respons dan riwayat percakapan dibatasi secara otomatis di kode untuk efisiensi performa.
+- **🌡️ Karakter & Tone Konsisten**: Nilai temperatur disetel permanen di kode (0.75) agar gaya percakapan Gen Z tetap ekspresif dan santai.
 
 ---
 
